@@ -1,0 +1,8 @@
+{
+  "service": {
+    "AUTOMATION_JOB_NAME": "component_testing",
+    "COMPONENT_TEST_REPO_NAME": "logging-service-api-test",
+    "DEPLOY_JOB_NAME": "aws-ramplift-deploy-k8s",
+    "EMAIL_TO": "UT-RAMP-Lift-Build-Notifications@perion.com"
+   }
+}

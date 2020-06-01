@@ -1,0 +1,75 @@
+#!/usr/bin/env groovy
+
+import jenkins.model.Jenkins
+import hudson.model.*
+import groovy.json.*
+
+////////////////////////////////////////////   INITIAL SETTINGS   //////////////////////////////////////////////////////////
+//                                                        
+//IMPORTANT!!!! Use "dev" devops branch for development and testing purposes only !!!
+//Succesfull builds , that used not "master" Devops branch will be marked as UNSTABLE (yellow).
+//Once you finish development  - merge "dev" branch to "master" and revert this file to default values:
+// 
+//Normal mode settings:        
+//      @Library("RAMP") _
+//      env.DEVOPS_BRANCH='master'
+//         
+//Development mode settings:        
+//      @Library("RAMP_dev") _
+//      env.DEVOPS_BRANCH='dev'
+        
+@Library("RAMP") _        
+env.DEVOPS_BRANCH='master'
+
+//Set service group. Service group is required to pull correct global_pipeline_properties.json file from devops repository 
+env.GROUP='RAMP'
+//Set main pipeline Jenkinsfile 
+env.JENKINSFILE='Jenkinsfile_NEW_UT'
+//Set Devops repository name 
+env.DEVOPS_REPO='perion-devops'
+//Set Git user
+env.GIT_CREDENTIALS='ut-israel-devops'
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+if ("${params.ENVIRONMENT_TYPE}" == "production") {
+        echo "ENVIRONMENT_TYPE production is prohibited. Job aborted"
+        currentBuild.result = 'ABORTED'
+        setJobParameters.init()
+        return
+} 
+
+timeout(time: 20, unit: 'MINUTES') { //Abort a job if stucked for more than 5 min.
+    node('master') {
+
+        try {
+                // Clean up work space
+                step([$class: 'WsCleanup'])
+
+                withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: "${GIT_CREDENTIALS}", usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD']]) { 
+                   sh '''#!/bin/bash 
+
+                       git clone https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/PerionNet/${DEVOPS_REPO}.git --branch ${DEVOPS_BRANCH} || exit 1
+                       cp ${DEVOPS_REPO}/ci_tools/${JENKINSFILE} .
+                       cp ${DEVOPS_REPO}/ci_tools/params/${GROUP}/global_pipeline_properties.json .
+                       rm -rf ${DEVOPS_REPO}        
+
+                  '''  
+                } //end withCredentials
+
+               //Load global variables from global_pipeline_properties.json        
+               loadVariables.global()
+
+               //Run generic pipeline         
+                def gold_pipeline = load "${JENKINSFILE}"          
+    
+        } //end try
+            
+        catch(error){ //Send notification to devops@perion.com and terminate the job.
+           
+            setJobParameters.init()
+            throw error
+  
+        } //end catch
+    } // end of node
+} //end of timeout

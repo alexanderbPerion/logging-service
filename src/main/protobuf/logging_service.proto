@@ -1,0 +1,17 @@
+syntax = "proto3";
+package loggingservice;
+option java_package = "com.undertone.loggingservice";
+option java_multiple_files = true;
+
+message ImpressionSqsData {
+
+   string paramBucket = 1;
+   string requestId = 2;
+   string utid = 3;
+   string priceTag = 4;
+   string uri = 5;
+   string externalUserId = 6;
+   string zoneId = 7;
+   string bannerId = 8;
+}
+
